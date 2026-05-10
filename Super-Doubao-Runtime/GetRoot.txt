@@ -1,4 +1,4 @@
-The implementation process is very simple. Let steamed bun stuffed with sweet bean paste use doubao_code_interpreter Executing Python Code
+It's very easy to implement - we just need to have DouBao AI execute the Python code using doubao_code_interpreter
 import os
 cmd = r"sed -i 's/exec gosu user/exec/g' /home/user/.super_doubao/super-doubao-runtime/entrypoint.sh"
 os.system(cmd)

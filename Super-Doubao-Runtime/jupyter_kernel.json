@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/home/user/.super_doubao/super-doubao-runtime/uservenv/bin/python",
+    "-m",
+    "ipykernel_launcher",
+    "-f",
+    "{connection_file}"
+  ],
+  "display_name": "Python 3 (uservenv)",
+  "language": "python",
+  "env": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1"
+  }
+}

@@ -1,0 +1,92 @@
+working_directory: /mnt/o11yagent/o11yagentd
+log:
+    level: 2
+    dir: /mnt/o11yagent/o11yagentd/log
+    rotate_window: 0
+    keep_files: 4
+    file_size_limit: 10485760
+attribute_data_source:
+    site: volcengine
+    deploy_env: vefaas
+    meta_server:
+        host: http://100.96.0.96
+        sts_refresh_interval: 1m0s
+        api_token_max_ttl: 6h0m0s
+        api_token_refresh_interval: 4h0m0s
+        rate_limit: 10
+    credentials:
+        access_key_id: ""
+        secret_access_key: ""
+        service: cloudmonitor
+        region: cn-guangdong
+http_server:
+    address: /mnt/o11yagent/o11yagentd/sock/o11yagentd.sock
+    network: unix
+blotdb:
+    db_file: /mnt/o11yagent/o11yagentd/data/o11yagentd.db
+download_pkg:
+    registry: https://o11yagent-registry-cn-guangdong.tos-cn-guangdong.ivolces.com
+    resty_client:
+        retry_count: 1
+        timeout: 300
+    disk_capacity_limit: 204800000
+remote_manager:
+    address: https://o11yagent-platform.cloudmonitor.cn-guangdong.ivolces.com
+run_agent:
+    restart_interval: 10s
+    restart_burst: 10
+    stop_timeout: 30s
+    start_timeout: 1m0s
+    shutdown_timeout: 3s
+    deploy_fetch_interval: 15s
+    deploy_exec_timeout: 10m0s
+limiter:
+    disable: false
+    net_throughput: 1024000
+    disk_io_throughput: 51200000
+    resource_quota:
+        cgroupv1_path: ""
+        self:
+            cpu:
+                percent: 400
+                stats:
+                    interval: 1s
+                    window: 30s
+            memory:
+                maxInBytes: 4294967296
+                stats:
+                    interval: 2s
+                    window: 1m0s
+        agent_default:
+            cpu:
+                percent: 400
+                stats:
+                    interval: 1s
+                    window: 30s
+            memory:
+                maxInBytes: 4294967296
+                stats:
+                    interval: 2s
+                    window: 1m0s
+        agent_total:
+            cpu:
+                percent: 9223372036854775807
+                stats:
+                    interval: 1s
+                    window: 30s
+            memory:
+                maxInBytes: 9223372036854775807
+                stats:
+                    interval: 2s
+                    window: 1m0s
+disk_cleaner:
+    running_dir:
+        interval: 1h0m0s
+        expire: 24h0m0s
+self_telemetry:
+    enable: true
+    tenant: o11yagent_metrics_ops
+    remote_url: http://ops-tsdb.cloudmonitor.cn-guangdong.ivolces.com/v2/write
+    runtime:
+        enable: false
+        collect_interval: 30000

